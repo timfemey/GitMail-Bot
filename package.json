@@ -1,0 +1,15 @@
+{
+  "name": "gitmail-bot",
+  "type": "module",
+  "version": "1.0.0",
+  "description": "A Github Bot for sending mails in a Github Issue",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Ishola Obafemi",
+  "license": "ISC",
+  "dependencies": {
+    "probot": "^9.14.2"
+  }
+}
