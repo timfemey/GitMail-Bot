@@ -4,13 +4,12 @@
   "description": "A Github Bot for sending mails in a Github Issue",
   "main": "index.js",
   "scripts": {
-    "start": "node index.js",
-    "test": "probot run ./index.js"
+    "start": "probot run ./index.js"
   },
   "author": "Ishola Obafemi",
   "license": "ISC",
   "dependencies": {
-    "@octokit/auth-app": "^3.6.1",
+    "axios": "^0.26.1",
     "dotenv": "^16.0.0",
     "email": "^0.2.6",
     "probot": "^12.2.2"
