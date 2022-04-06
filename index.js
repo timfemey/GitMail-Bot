@@ -1,46 +1,101 @@
 const dotenv = require("dotenv");
 dotenv.config();
 const { Email } = require("email");
+
 const axios = require("axios").default;
+const fs = require("fs");
+const jwt = require("jsonwebtoken");
+const cert = fs.readFileSync("gitmail-bot.2022-03-31.private-key.pem");
 
 //use oauth
 
 module.exports = (bot) => {
   bot.on("issue_comment.created", async (actions) => {
+    const token = jwt.sign({ iss: 185310 }, cert, {
+      algorithm: "RS256",
+      expiresIn: "10m",
+    });
+
     const { body } = actions.payload.issue; //Comment
+    const installation = actions.payload.installation;
+    const { type } = actions.payload.sender;
+    if (type === "Bot") {
+      return;
+    }
     let repo = actions.payload.repository; //Repository where issue comment is made
     let str = String(body);
     str = str.replace("!gitmail", "");
     const comment = actions.issue({
-      body: body.includes("!gitmail")
+      body: String(body).includes("!gitmail")
         ? str.length > 50
           ? `Sent message to owner(${repo.owner.login}) of repo, Message: \n ${str}`
           : "Characters must be more than 50 and contain !gitmail to send mail to owner of repo :)"
         : "",
     }); // Set Bot Comment in body property
 
-    let repoOwnerURL = repo.owner.url; //Owner of Repo
-    let data = await axios.get(repoOwnerURL, {
-      responseType: "json",
-      headers: { Accept: "application/vnd.github.v3+json" },
-    });
-    let email = data.data.email;
-    if (email == null) email = "";
+    if (comment.body === "") {
+      return;
+    }
+
+    let repoOwnerDetails = repo.owner; //Owner of Repo
+    let Id = await axios.get(
+      `https://api.github.com/repos/${repoOwnerDetails.login}/${repo.name}/installation`,
+      {
+        headers: {
+          Accept: "application/vnd.github.v3+json",
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    );
+
+    let installationId = Id.data.id;
+    let access = await axios.post(
+      ` https://api.github.com/app/installations/${installationId}/access_tokens`,
+      "",
+      {
+        headers: {
+          Accept: "application/vnd.github.v3+json",
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    );
+    let accessToken = access.data.token;
+
+    let email = await axios.get(
+      `https://api.github.com/users/${repoOwnerDetails.login}`,
+      {
+        headers: {
+          Accept: "application/vnd.github.v3+json",
+          Authorization: `token ${accessToken}`,
+        },
+      }
+    );
+
+    let email_addr = email.data.email;
+    if (email_addr == null) {
+      return actions.octokit.issues.createComment(
+        "Repository Owner doesnt have a Public Email Address \n Cant Send this Message \n Repository Owner shoud have a  ublic email address in Github Settings"
+      );
+    }
 
     let mail = new Email({
       from: `Your Github Repo ${repo.name} `,
       to: `isholaobafemi@gmail.com`,
       subject: `Message from your Github Repo : ${repo.name} `,
-      body: str,
-    }); //Email Owener of Repo
+      body: str === "" ? "Nothing" : str,
+    }); //Email Owner of Repo
 
     //Send Mail
-    if (comment.body != "")
+
+    if (comment.body === "") {
+      console.log("Hmmm");
+    } else {
       mail.send((err) => {
         bot.log.error(err);
-        return actions.octokit.issues.createComment(`Error Occured`);
       });
+      return actions.octokit.issues.createComment(comment);
+    }
 
-    return actions.octokit.issues.createComment(comment); //Bot should make Comment in response
+    //Bot should make Comment in response
   });
 };
