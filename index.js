@@ -6,24 +6,22 @@ const axios = require("axios").default;
 const fs = require("fs");
 const jwt = require("jsonwebtoken");
 const cert = fs.readFileSync("gitmail-bot.2022-03-31.private-key.pem");
-
+const token = jwt.sign({ iss: "YOUR APP_ID" }, cert, {
+  algorithm: "RS256",
+  expiresIn: "10m",
+});
 //use oauth
 
 module.exports = (bot) => {
   bot.on("issue_comment.created", async (actions) => {
-    const token = jwt.sign({ iss: 185310 }, cert, {
-      algorithm: "RS256",
-      expiresIn: "10m",
-    });
-
-    const { body } = actions.payload.issue; //Comment
-    const installation = actions.payload.installation;
+    const body = actions.payload.comment.body; //Comment
     const { type } = actions.payload.sender;
     if (type === "Bot") {
       return;
     }
     let repo = actions.payload.repository; //Repository where issue comment is made
     let str = String(body);
+    console.log(str);
     str = str.replace("!gitmail", "");
     const comment = actions.issue({
       body: String(body).includes("!gitmail")
@@ -33,7 +31,7 @@ module.exports = (bot) => {
         : "",
     }); // Set Bot Comment in body property
 
-    if (comment.body === "") {
+    if (comment.body == "") {
       return;
     }
 
@@ -41,6 +39,7 @@ module.exports = (bot) => {
     let Id = await axios.get(
       `https://api.github.com/repos/${repoOwnerDetails.login}/${repo.name}/installation`,
       {
+        responseType: "json",
         headers: {
           Accept: "application/vnd.github.v3+json",
           Authorization: `Bearer ${token}`,
@@ -53,6 +52,7 @@ module.exports = (bot) => {
       ` https://api.github.com/app/installations/${installationId}/access_tokens`,
       "",
       {
+        responseType: "json",
         headers: {
           Accept: "application/vnd.github.v3+json",
           Authorization: `Bearer ${token}`,
@@ -61,15 +61,13 @@ module.exports = (bot) => {
     );
     let accessToken = access.data.token;
 
-    let email = await axios.get(
-      `https://api.github.com/users/${repoOwnerDetails.login}`,
-      {
-        headers: {
-          Accept: "application/vnd.github.v3+json",
-          Authorization: `token ${accessToken}`,
-        },
-      }
-    );
+    let email = await axios.get(`${repoOwnerDetails.url}`, {
+      responseType: "json",
+      headers: {
+        Accept: "application/vnd.github.v3+json",
+        Authorization: `token ${accessToken}`,
+      },
+    });
 
     let email_addr = email.data.email;
     if (email_addr == null) {
