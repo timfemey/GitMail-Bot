@@ -21,7 +21,7 @@ module.exports = (bot) => {
     }
     let repo = actions.payload.repository; //Repository where issue comment is made
     let str = String(body);
-    console.log(str);
+    //console.log(str);
     str = str.replace("!gitmail", "");
     const comment = actions.issue({
       body: String(body).includes("!gitmail")
@@ -78,7 +78,7 @@ module.exports = (bot) => {
 
     let mail = new Email({
       from: `Your Github Repo ${repo.name} `,
-      to: `isholaobafemi@gmail.com`,
+      to: `${email_addr}`,
       subject: `Message from your Github Repo : ${repo.name} `,
       body: str === "" ? "Nothing" : str,
     }); //Email Owner of Repo
